@@ -10,7 +10,7 @@ Embedded Systems – Assignment 1
 
 # Introduction
 
-This assignment implements the bare-metal boot sequence of an STM32F4 Cortex-M4 microcontroller running inside the QEMU emulator.
+This assignment implements the bare-metal boot sequence of an STM32F4 Cortex-M4 microcontroller running inside the QEMU emulator.Built and tested on macOS.
 
 The submission covers:
 
@@ -107,6 +107,8 @@ The `-S` flag tells QEMU to halt immediately at reset and wait.
 
 ```bash
 arm-none-eabi-gdb firmware.elf
+if asked something like  q to quit, c to continue without paging--
+then press c
 (gdb) target remote :3333
 ```
 
@@ -188,11 +190,6 @@ verify the vector table contents and initial register state.
 **GDB log:**
 
 ```
-(gdb) target remote :3333
-Remote debugging using :3333
-Reset_Handler () at startup/startup_stm32f4.s:114
-114         ldr r0, =_sidata
-
 (gdb) x/2xw 0x08000000
 0x8000000 <g_pfnVectors>:    0x20020000    0x0800011d
 
@@ -201,15 +198,13 @@ sp    0x20020000    0x20020000
 pc    0x800011c     0x800011c <Reset_Handler>
 ```
 
-**Explanation:**
+The screenshot shows:
 
-- `0x20020000` at address `0x08000000` — this is `_estack`, the top of 128 KB RAM.
-  The CPU loaded it into SP automatically on reset.
-- `0x0800011d` at address `0x08000004` — this is the reset vector. The LSB is 1
-  (the Thumb bit) as required by the Cortex-M architecture. The CPU strips the LSB
-  and sets PC to `0x0800011c` which is the first instruction of `Reset_Handler`.
-- GDB connected and halted right at line 114 of the startup file, which is the
-  first instruction of `Reset_Handler` — exactly where reset should land.
+0x20020000 at 0x08000000 — correct initial stack pointer (top of 128 KB RAM)
+0x0800011d at 0x08000004 — reset vector with Thumb bit set (LSB = 1)
+SP = 0x20020000, PC = 0x0800011c — CPU stripped the Thumb bit and is sitting at the first instruction of Reset_Handler
+
+
 
 ---
 
@@ -232,7 +227,6 @@ A breakpoint was placed at `main()` and execution was continued so that
 ```
 (gdb) break main
 Breakpoint 1 at 0x80000ae: file src/main.c, line 68.
-
 (gdb) continue
 Continuing.
 Breakpoint 1, main () at src/main.c:68
@@ -240,7 +234,6 @@ Breakpoint 1, main () at src/main.c:68
 
 (gdb) print initialized
 $1 = 123
-
 (gdb) print uninitialized
 $2 = 0
 ```
@@ -390,6 +383,7 @@ stm32_qemu_baremetal_Aditya Jha/
 ```
 
 ---
+
 
 # Screenshots
 <img width="1229" height="1280" alt="image" src="https://github.com/user-attachments/assets/bc067106-58a4-4f66-ad69-c5e7dbe93c84" />
