@@ -1,16 +1,29 @@
 # STM32F4 Bare-Metal Boot on QEMU
 
-## Author
-Aditya Jha
+## Submitted by
+
+| Name | Entry Number |
+|-----|-------------|
+| Aditya Jha | 2025EET2479 |
+| Aman Mongre | 2025EET2488 |
+
 
 ## Course
 Embedded Systems – Assignment 1
 
 ---
+The README file can be viewed in Markdown preview mode in most editors.
+
+VS Code (macOS): Cmd + Shift + V  
+VS Code (Windows): Ctrl + Shift + V
+
+Screenshots can be viewed in preview mode.
+
+---
 
 # Introduction
 
-This assignment implements the bare-metal boot sequence of an STM32F4 Cortex-M4 microcontroller running inside the QEMU emulator.Built and tested on macOS.
+This assignment implements the bare-metal boot sequence of an STM32F4 Cortex-M4 microcontroller running inside the QEMU emulator. The assignment was built and tested on macOS.
 
 The submission covers:
 
@@ -23,7 +36,7 @@ The submission covers:
 
 ---
 
-# Memory Map Used
+# Memory Map 
 
 These are the two memory regions available on the STM32F405 and configured in `linker.ld`.
 
@@ -32,27 +45,28 @@ These are the two memory regions available on the STM32F405 and configured in `l
 | FLASH  | `0x08000000` | `0x080FFFFF` | 1 MB   |
 | SRAM   | `0x20000000` | `0x2001FFFF` | 128 KB |
 
-`_estack` represents the initial stack pointer value. It is placed at the top of RAM (0x20020000), which is calculated as ORIGIN(RAM) + LENGTH(RAM). The Cortex-M stack grows downward toward lower memory addresses, so the stack must start from the highest RAM address.
+`_estack` represents the initial stack pointer value. It is placed at the top of RAM (`0x20020000`), which is calculated as `ORIGIN(RAM) + LENGTH(RAM)`. The Cortex-M stack grows downward toward lower memory addresses, so the stack must start from the highest RAM address.
 
 # Linker symbols used by the startup code:
 
-| Symbol   | Value (from map) | Description                                      |
-|----------|------------------|--------------------------------------------------|
-| `_estack` | `0x20020000` | Initial stack pointer — top of RAM |
-| `_sidata` | `0x08000208` | Flash address where `.data` initial values are stored |
-| `_sdata`  | `0x20000000` | Start address of `.data` section in RAM |
-| `_edata`  | `0x20000004` | End address of `.data` section in RAM |
-| `_sbss`   | `0x20000004` | Start address of `.bss` section in RAM |
-| `_ebss`   | `0x2000000C` | End address of `.bss` section in RAM |
+| Symbol    | Value (from map)  | Description                                           |
+|-----------|-------------------|-------------------------------------------------------|
+| `_estack` | `0x20020000`      | Initial stack pointer, top of RAM                   |
+| `_sidata` | `0x0800021c`      | Flash address where `.data` initial values are stored |
+| `_sdata`  | `0x20000000`      | Start address of `.data` section in RAM               |
+| `_edata`  | `0x20000004`      | End address of `.data` section in RAM                 |
+| `_sbss`   | `0x20000004`      | Start address of `.bss` section in RAM                |
+| `_ebss`   | `0x2000000c`      | End address of `.bss` section in RAM                  |
+
 ---
 
 # QEMU Run and Debug Commands
 
-
 ## Build the Project
 
 ```bash
-make all
+make clean
+make
 ```
 
 This compiles `src/main.c` and `startup/startup_stm32f4.s`, links them with
@@ -84,7 +98,7 @@ To exit QEMU: press **Ctrl+A then X**.
 
 Open two terminals.
 
-**Terminal 1 – Start QEMU paused, waiting for GDB**
+**Terminal 1 **
 
 ```bash
 make qemu-gdb
@@ -107,12 +121,10 @@ The `-S` flag tells QEMU to halt immediately at reset and wait.
 
 ```bash
 arm-none-eabi-gdb firmware.elf
-if asked something like  q to quit, c to continue without paging--
-then press c
+# if pager prompts appear, press c to continue
 (gdb) target remote :3333
 ```
-
-From here we can set breakpoints, inspect registers and memory, and step through the startup code as shown in the sections below.
+Now we can set breakpoints, step through code, and inspect memory.
 
 ---
 
@@ -120,14 +132,14 @@ From here we can set breakpoints, inspect registers and memory, and step through
 
 1. After reset the Cortex-M4 reads the vector table from the start of flash (`0x08000000`).
 2. The first word (`0x20020000`) is loaded into the stack pointer SP.
-3. The second word (`0x0800011d`) is loaded into the program counter PC — the LSB is 1 (Thumb bit) which the CPU strips off before jumping, landing at `0x0800011c`.
+3. The second word (`0x0800011d`) is loaded into the program counter PC ,the LSB is 1 (Thumb bit). The CPU clears this bit internally and begins execution at address `0x0800011c`, which is the first instruction of `Reset_Handler`.
 4. The CPU begins executing `Reset_Handler` at `0x0800011c`.
-5. `Reset_Handler` copies the `.data` section word-by-word from flash (`0x08000208`) to RAM (`0x20000000`) using the `_sidata`, `_sdata`, and `_edata` symbols.
-6. `Reset_Handler` zeroes every word of the `.bss` section in RAM (`0x20000004` to `0x2000000C`) using the `_sbss` and `_ebss` symbols.
+5. `Reset_Handler` copies the `.data` section word-by-word from flash (`0x0800021c`) to RAM (`0x20000000`) using the `_sidata`, `_sdata`, and `_edata` symbols.
+6. `Reset_Handler` zeroes every word of the `.bss` section in RAM (`0x20000004` to `0x2000000c`) using the `_sbss` and `_ebss` symbols.
 7. `Reset_Handler` calls `main()` with `bl main`.
 8. `main()` prints status messages through semihosting to confirm it was reached and that memory initialization worked.
-9. `main()` configures the SysTick timer (24-bit reload, processor clock, interrupt enabled).
-10. The SysTick interrupt fires periodically and `SysTick_Handler` increments `systick_count`; the main loop prints `SysTick fired` each time the counter changes.
+9. `main()` configures the SysTick timer.
+10. The SysTick interrupt fires periodically and `SysTick_Handler` increments the global `systick_count` variable; the main loop detects the change and prints a message through semihosting each time the counter increases.
 
 ---
 
@@ -142,18 +154,18 @@ RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
 
 ## Section placement (from `firmware.map`)
 
-| Section      | Address      | Size  | Notes                                       |
-|--------------|--------------|-------|---------------------------------------------|
-| `.isr_vector`| `0x08000000` | 64 B  | 16 × 4-byte vectors, placed first in flash  |
-| `.text`      | `0x08000040` | 304 B | All compiled code including `main`          |
-| `.rodata`    | `0x08000170` | 152 B | String literals used by `sh_puts`           |
-| `.data` (load)| `0x08000208`| 4 B   | Initial value of `initialized` stored here in flash |
-| `.data` (run)| `0x20000000` | 4 B   | Copied to RAM at startup by `Reset_Handler` |
-| `.bss`       | `0x20000004` | 8 B   | `uninitialized` (4 B) + `systick_count` (4 B), zeroed at startup |
+| Section         | Address      | Size   | Notes                                                        |
+|-----------------|--------------|--------|--------------------------------------------------------------|
+| `.isr_vector`   | `0x08000000` | 64 B   | 16 × 4-byte vectors, placed first in flash                   |
+| `.text`         | `0x08000040` | 304 B  | All compiled code including `main`                           |
+| `.rodata`       | `0x08000170` | 172 B  | String literals used by `sh_puts`                            |
+| `.data` (load)  | `0x0800021c` | 4 B    | Initial value of `initialized` stored here in flash          |
+| `.data` (run)   | `0x20000000` | 4 B    | Copied to RAM at startup by `Reset_Handler`                  |
+| `.bss`          | `0x20000004` | 8 B    | `uninitialized` (4 B) + `systick_count` (4 B), zeroed at startup |
 
 ## .data load address vs run address
 
-The `.data` section has **two addresses**. The *load address* (`0x08000208`) is where
+The `.data` section has **two addresses**. The *load address* (`0x0800021c`) is where
 the initial values are stored in flash inside the firmware image. The *run address*
 (`0x20000000`) is where the variables must live in RAM at runtime so they can be
 modified. `Reset_Handler` performs the copy between these two addresses before
@@ -161,8 +173,8 @@ calling `main()`.
 
 ## Flash and RAM usage
 
-- **Flash used:** `0x0800020C − 0x08000000` = **524 bytes** (out of 1 MB)
-- **RAM used:**   `0x2000000C − 0x20000000` = **12 bytes** (out of 128 KB)
+- **Flash used:** `0x08000220 − 0x08000000` = **544 bytes** (out of 1 MB)
+- **RAM used:**   `0x2000000c − 0x20000000` = **12 bytes** (out of 128 KB)
 
 The vector table sits at `0x08000000` exactly as required by the Cortex-M architecture.
 
@@ -170,19 +182,13 @@ The vector table sits at `0x08000000` exactly as required by the Cortex-M archit
 
 # GDB Evidence
 
+All the evidences below are from an actual GDB session.Screenshots are also included .
+
 ## Part A – Vector Table and Reset Handler
-
-The vector table `g_pfnVectors` is placed at the start of flash by the linker
-script section `.isr_vector > FLASH`. The first entry is `_estack` (initial SP)
-and the second is `Reset_Handler`.
-
-GDB was connected to QEMU immediately after reset (before any code ran) to
-verify the vector table contents and initial register state.
 
 **Commands used:**
 
 ```
-(gdb) target remote :3333
 (gdb) x/2xw 0x08000000
 (gdb) info reg sp pc
 ```
@@ -191,20 +197,22 @@ verify the vector table contents and initial register state.
 
 ```
 (gdb) x/2xw 0x08000000
-0x8000000 <g_pfnVectors>:    0x20020000    0x0800011d
+0x8000000 <g_pfnVectors>:       0x20020000      0x0800011d
 
 (gdb) info reg sp pc
-sp    0x20020000    0x20020000
-pc    0x800011c     0x800011c <Reset_Handler>
+sp             0x20020000          0x20020000
+pc             0x800011c           0x800011c <Reset_Handler>
 ```
+**Explanation:**
 
-The screenshot shows:
+- The first value in the vector table is `0x20020000`. This is the initial stack pointer (`_estack`), which is the top of RAM.
+- The second value is `0x0800011d`. This is the address of `Reset_Handler`. The least significant bit is `1` because Cortex-M processors use Thumb mode.
+- When the CPU loads this address, it clears the last bit and starts executing at `0x0800011c`.
+- The register output confirms this:  
+  - `sp = 0x20020000` → stack pointer correctly loaded from the vector table  
+  - `pc = 0x0800011c` → program counter pointing to `Reset_Handler`
 
-0x20020000 at 0x08000000 — correct initial stack pointer (top of 128 KB RAM)
-0x0800011d at 0x08000004 — reset vector with Thumb bit set (LSB = 1)
-SP = 0x20020000, PC = 0x0800011c — CPU stripped the Thumb bit and is sitting at the first instruction of Reset_Handler
-
-
+This confirms that the vector table is correctly placed at the start of flash and that the processor begins execution at `Reset_Handler` after reset.
 
 ---
 
@@ -226,22 +234,24 @@ A breakpoint was placed at `main()` and execution was continued so that
 
 ```
 (gdb) break main
-Breakpoint 1 at 0x80000ae: file src/main.c, line 68.
+Breakpoint 1 at 0x80000ae: file src/main.c, line 56.
 (gdb) continue
 Continuing.
-Breakpoint 1, main () at src/main.c:68
-68          sh_puts("Boot OK\r\n");
 
+Breakpoint 1, main () at src/main.c:56
+56          sh_puts("\r\n STM32F4 Bare-Metal Boot Success \r\n");
 (gdb) print initialized
 $1 = 123
 (gdb) print uninitialized
 $2 = 0
+(gdb) 
+
 ```
 
 **Explanation:**
 
 - `initialized == 123` confirms the `.data` copy loop worked. The value 123 was
-  stored in flash at `0x08000208` and was copied to RAM at `0x20000000` by
+  stored in flash at `0x0800021c` and was copied to RAM at `0x20000000` by
   `Reset_Handler` before `main()` was called.
 - `uninitialized == 0` confirms the `.bss` zero loop worked. The variable has no
   initializer in C so it was zeroed by the startup code.
@@ -250,15 +260,22 @@ $2 = 0
 
 ## Part C – Linker Script and Memory Layout
 
-The linker script is in `ld/linker.ld`. It defines the FLASH and RAM regions,
-places `.isr_vector` first in flash, and uses `AT > FLASH` on `.data` so the
-initial values are stored in flash but the run-time address is in RAM.
+The linker script (`ld/linker.ld`) defines the memory layout of the program.
+It specifies the FLASH and RAM regions and tells the linker where each section
+of the program should be placed.
 
-The map file `firmware.map` was generated by the linker with `-Wl,-Map=firmware.map`
-and confirms all placements. See the **Linker Script and Map File Explanation**
-section above for the full breakdown including load vs run addresses and flash/RAM
-usage numbers.
+The `.isr_vector` section is placed at the beginning of flash (`0x08000000`)
+because the Cortex-M processor reads the vector table from this address during
+reset.
 
+The `.data` section uses `AT > FLASH`. This means the initial values of the
+variables are stored in flash, but the variables themselves run in RAM at
+runtime. During startup, `Reset_Handler` copies these values from flash to RAM.
+
+The linker also generates a map file (`firmware.map`) using the flag
+`-Wl,-Map=firmware.map`. This file shows the exact memory addresses of all
+sections and symbols, which confirms that the program was placed in memory
+correctly.
 ---
 
 ## Part D – Semihosting Output
@@ -270,35 +287,42 @@ null-terminated string to the terminal.
 
 QEMU must be run with `-semihosting-config enable=on,target=native`.
 
-**Expected terminal output:**
+**Program Output:**
 
 ```
-Boot OK
-Data/BSS OK: initialized=123, uninitialized=0
-SysTick enabled – entering main loop
-SysTick fired
-SysTick fired
-SysTick fired
+STM32F4 Bare-Metal Boot Success 
+Memory Init Verification: SUCCESS
+SysTick Interrupts Active
+SysTick Interrupt detected!
+SysTick Interrupt detected!
+SysTick Interrupt detected!
+SysTick Interrupt detected!
+SysTick Interrupt detected!
+SysTick Interrupt detected!
+
 ...
 ```
 
-This output proves that `main()` was reached, that both memory sections were
-initialized correctly, and that SysTick interrupts are firing.
+This output proves that `main()` was reached, that both memory sections were initialized correctly, and that SysTick interrupts are firing.
 
 ---
 
 ## Part E – SysTick Interrupt Verification
 
-The SysTick timer is configured in `systick_init()` with the 24-bit maximum
-reload value (`0x00FFFFFF`), using the processor clock. Both the counter enable
-bit and the interrupt enable bit are set in `SYSTICK_CTRL`.
+The SysTick timer is initialized in `systick_init()` using the maximum reload
+value (`0x00FFFFFF`). The processor clock is used and the interrupt is enabled
+by setting the required bits in the `SYSTICK_CTRL` register.
 
-`SysTick_Handler` is implemented in the startup file. It increments the global
-`systick_count` variable which is declared `volatile` in `main.c` so the compiler
-cannot cache it.
+The interrupt handler `SysTick_Handler` is implemented in the startup file.
+Every time the interrupt fires, it increments the global variable
+`systick_count`.
 
-To verify the handler was actually running, a breakpoint was placed inside it and
-`systick_count` was printed across multiple firings.
+The variable `systick_count` is declared as `volatile` in `main.c` so the
+compiler always reads its latest value from memory.
+
+To verify that the interrupt was working, a breakpoint was placed inside
+`SysTick_Handler`. The value of `systick_count` was printed multiple times
+while continuing execution.
 
 **Commands used:**
 
@@ -317,59 +341,48 @@ To verify the handler was actually running, a breakpoint was placed inside it an
 
 ```
 (gdb) break SysTick_Handler
-Breakpoint 2 at 0x800015c: file startup/startup_stm32f4.s, line 184.
-
-(gdb) monitor system_reset
+Breakpoint 2 at 0x800015c: file startup/startup_stm32f4.s, line 138.
 (gdb) continue
 Continuing.
-Breakpoint 1, main () at src/main.c:68
-68          sh_puts("Boot OK\r\n");
 
+Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:138
+138     ldr r0, =systick_count    /* load address of the counter variable */
 (gdb) print systick_count
 $3 = 0
-
 (gdb) continue
 Continuing.
-Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:184
-184         ldr r0, =systick_count
 
+Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:138
+138     ldr r0, =systick_count    /* load address of the counter variable */
 (gdb) print systick_count
-$4 = 0
-
+$4 = 1
 (gdb) continue
 Continuing.
-Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:184
-184         ldr r0, =systick_count
 
+Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:138
+138     ldr r0, =systick_count    /* load address of the counter variable */
 (gdb) print systick_count
-$5 = 1
-
-(gdb) continue
-Continuing.
-Breakpoint 2, SysTick_Handler () at startup/startup_stm32f4.s:184
-184         ldr r0, =systick_count
-
-(gdb) print systick_count
-$6 = 2
+$5 = 2
+(gdb) 
 ```
 
 **Explanation:**
 
-- The handler fires at `0x0800015c` which matches the map file address for
-  `SysTick_Handler`.
-- On the first hit `systick_count` is still 0 because the breakpoint halts before
-  the increment instruction executes.
-- After the second `continue`, the handler fires again and `systick_count` is 1
-  — the first increment has committed to RAM.
-- After the third `continue` it is 2, confirming the counter increments by exactly
-  1 on each interrupt. The interrupt is working correctly.
+- A breakpoint was placed inside `SysTick_Handler`.
+- Each time the SysTick interrupt fires, execution stops at the handler.
+- The value of `systick_count` was printed after each interrupt.
+From the log we can see:
+- First time → `systick_count = 0`
+- Second time → `systick_count = 1`
+- Third time → `systick_count = 2`
 
+This shows that the interrupt handler is running and the variable `systick_count` is increasing by 1 every time the SysTick interrupt occurs.
 ---
 
 # File Structure
 
 ```
-stm32_qemu_baremetal_Aditya Jha/
+stm32_qemu_baremetal_aditya_jha_aman_mongre/
 ├── src/
 │   ├── main.c
 │   └── semihosting.h
@@ -386,12 +399,12 @@ stm32_qemu_baremetal_Aditya Jha/
 
 
 # Screenshots
-<img width="1229" height="1280" alt="image" src="https://github.com/user-attachments/assets/bc067106-58a4-4f66-ad69-c5e7dbe93c84" />
-<img width="1232" height="1280" alt="image" src="https://github.com/user-attachments/assets/4a98de40-060a-4494-8c95-73206849027e" />
-<img width="1280" height="924" alt="image" src="https://github.com/user-attachments/assets/710a7de6-6caf-4eed-a63f-5f491d3f92bf" />
-<img width="1280" height="808" alt="image" src="https://github.com/user-attachments/assets/1e779f8b-5713-4b85-b2f4-07220d2769ca" />
-<img width="1280" height="883" alt="image" src="https://github.com/user-attachments/assets/bc7388ac-d748-4221-8cf2-1ac797c68b63" />
 
+The following screenshots show the GDB session used to verify the boot process.
+
+<img width="1280" height="878" alt="image" src="https://github.com/user-attachments/assets/0e6fba0b-93d1-4e95-a497-517a9eb04ebd" />
+<img width="1280" height="640" alt="image" src="https://github.com/user-attachments/assets/2bc66390-54dd-4b63-8b42-f2b6f1e0d5c4" />
+<img width="1280" height="885" alt="image" src="https://github.com/user-attachments/assets/132ee555-1d4b-46fd-9fe2-fc26cf8e59cd" />
 
 
 
@@ -402,4 +415,4 @@ processor. The vector table, Reset_Handler, memory initialization, linker script
 semihosting output, and SysTick interrupt were all implemented from scratch without
 any vendor library. GDB evidence confirms that every stage of the boot sequence —
 SP initialization, PC jump to Reset_Handler, .data copy, .bss zeroing, and SysTick
-interrupt delivery — works as expected.
+interrupt delivery works as expected.
