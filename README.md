@@ -389,7 +389,7 @@ stm32_qemu_baremetal_Aditya Jha/
 <img width="1229" height="1280" alt="image" src="https://github.com/user-attachments/assets/bc067106-58a4-4f66-ad69-c5e7dbe93c84" />
 <img width="1232" height="1280" alt="image" src="https://github.com/user-attachments/assets/4a98de40-060a-4494-8c95-73206849027e" />
 <img width="1280" height="924" alt="image" src="https://github.com/user-attachments/assets/710a7de6-6caf-4eed-a63f-5f491d3f92bf" />
-<img width="1209" height="1280" alt="image" src="https://github.com/user-attachments/assets/a0e6ea5d-954d-483c-b656-bf0d5b7be1b5" />
+<img width="1280" height="808" alt="image" src="https://github.com/user-attachments/assets/1e779f8b-5713-4b85-b2f4-07220d2769ca" />
 <img width="1280" height="883" alt="image" src="https://github.com/user-attachments/assets/bc7388ac-d748-4221-8cf2-1ac797c68b63" />
 
 
